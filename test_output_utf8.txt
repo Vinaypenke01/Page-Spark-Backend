@@ -1,0 +1,96 @@
+﻿python : Creating 
+test database for 
+alias 'default'...
+At line:1 char:1
++ python manage.py 
+test core.tests 
+--noinput > 
+test_output.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (Creatin   
+ g test d...as 'd    
+efault'...:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+
+..C:\Users\itzvi\AppD
+ata\Local\Python\pyth
+oncore-3.14-64\Lib\si
+te-packages\bleach\sa
+nitizer.py:166: NoCss
+SanitizerWarning: 
+'style' attribute 
+specified, but 
+css_sanitizer not 
+set.
+  warnings.warn(
+.F..INFO 2026-01-14 
+08:29:36,243 
+services 6792 28800 
+Starting page 
+generation for 
+user@test.com
+INFO 2026-01-14 
+08:30:15,719 
+services 6792 28800 
+Page generated 
+successfully: 8afcb24
+7-65c7-4d5e-9940-499e
+57cfff3c
+.
+=====================
+=====================
+=====================
+=======
+FAIL: test_removes_sc
+ript_tags (core.tests
+.SanitizationTests.te
+st_removes_script_tag
+s)
+---------------------
+---------------------
+---------------------
+-------
+Traceback (most 
+recent call last):
+  File "D:\livepage\b
+ackend\core\tests.py"
+, line 30, in test_re
+moves_script_tags
+    self.assertNotIn(
+'<script', clean)
+    ~~~~~~~~~~~~~~~~^
+^^^^^^^^^^^^^^^^^
+AssertionError: 
+'<script' 
+unexpectedly found 
+in '<p>Hello</p>alert
+("XSS")<html><head><s
+cript src="https://cd
+n.tailwindcss.com"></
+script></head></html>
+'
+
+---------------------
+---------------------
+---------------------
+-------
+Ran 7 tests in 
+41.290s
+
+FAILED (failures=1)
+Destroying test 
+database for alias 
+'default'...
+
+Found 7 test(s).
+System check identified no issues (0 silenced).

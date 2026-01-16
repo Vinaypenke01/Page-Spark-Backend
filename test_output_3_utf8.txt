@@ -1,0 +1,64 @@
+﻿python : Creating 
+test database for 
+alias 'default'...
+At line:1 char:1
++ python manage.py 
+test core.tests 
+--noinput > 
+test_output_3.txt 
+2>&1
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (Creatin   
+ g test d...as 'd    
+efault'...:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+
+..C:\Users\itzvi\AppD
+ata\Local\Python\pyth
+oncore-3.14-64\Lib\si
+te-packages\bleach\sa
+nitizer.py:166: NoCss
+SanitizerWarning: 
+'style' attribute 
+specified, but 
+css_sanitizer not 
+set.
+  warnings.warn(
+....INFO 2026-01-14 
+08:32:53,826 
+services 10128 25076 
+Starting page 
+generation for 
+user@test.com
+INFO 2026-01-14 
+08:33:15,455 
+services 10128 25076 
+Page generated 
+successfully: 9cef475
+f-3b46-4b36-9a29-6c15
+18bb498a
+.
+---------------------
+---------------------
+---------------------
+-------
+Ran 7 tests in 
+23.406s
+
+OK
+Destroying test 
+database for alias 
+'default'...
+
+Found 7 test(s).
+System check identified no issues (0 silenced).
