@@ -21,7 +21,20 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 # so the parent class can handle authentication
                 attrs["username"] = user_obj.username
             
-        return super().validate(attrs)
+        data = super().validate(attrs)
+
+        # Get the user object
+        user = AdminUser.objects.get(username=self.user.username)
+        
+        # Serialize user data
+        user_serializer = AdminUserSerializer(user)
+        
+        # Custom response format to match frontend expectations
+        return {
+            'user': user_serializer.data,
+            'token': data['access'],
+            'refreshToken': data['refresh']
+        }
 
 
 class PageRequestSerializer(serializers.ModelSerializer):
