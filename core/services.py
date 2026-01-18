@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from django.conf import settings
 from .models import Page
 from django.utils import timezone
+from .meta_prompt import MetaPromptService
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 # ==========================================================
 class GenericPageService:
     @staticmethod
-    def generate_page(email, prompt, page_type, theme):
+    def generate_page(email, prompt, page_type, theme, user_data=None):
         """
         Full page generation flow:
         1. Validates input
@@ -27,6 +28,12 @@ class GenericPageService:
             'theme': theme,
             'prompt_preview': prompt[:50]
         })
+
+        # 0. Meta-Prompting (if structured data provided)
+        if user_data:
+            logger.info(f"Using structured data for {email}")
+            prompt = MetaPromptService.construct_prompt(user_data)
+            logger.info(f"Optimized Prompt: {prompt[:100]}...")
 
         # 1. Validation
         if len(prompt) > 5000:
@@ -68,7 +75,8 @@ class GenericPageService:
                 "version": "1.1",
                 "provider": "openrouter",
                 "model": settings.OPENROUTER_MODEL,
-                "generated_at": timezone.now().isoformat()
+                "generated_at": timezone.now().isoformat(),
+                "original_data": user_data or {}
             }
         )
 

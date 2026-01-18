@@ -51,7 +51,8 @@ class GeneratePageView(APIView):
                 email=serializer.validated_data['email'],
                 prompt=serializer.validated_data['prompt'],
                 page_type=serializer.validated_data.get('page_type', 'other'),
-                theme=serializer.validated_data.get('theme', 'modern')
+                theme=serializer.validated_data.get('theme', 'modern'),
+                user_data=serializer.validated_data.get('user_data')
             )
             response_serializer = PageResponseSerializer(page, context={'request': request})
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)

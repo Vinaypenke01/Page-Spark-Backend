@@ -40,7 +40,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class PageRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = Page
-        fields = ['email', 'prompt', 'page_type', 'theme']
+    user_data = serializers.JSONField(required=False)
+    
+    class Meta:
+        model = Page
+        fields = ['email', 'prompt', 'page_type', 'theme', 'user_data']
 
     def validate_prompt(self, value):
         dangerous_patterns = ['<script', 'javascript:', 'onerror=']
