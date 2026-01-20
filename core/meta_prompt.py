@@ -46,12 +46,16 @@ class MetaPromptService:
             "- Add subtle decorative elements relevant to the occasion.",
             "",
             "### Technical Requirements",
-            "- Output ONLY valid HTML and CSS.",
-            "- Use semantic HTML5.",
-            "- Include CSS inside a <style> tag.",
+            "- Output ONLY valid HTML with Tailwind CSS utility classes.",
+            "- Use semantic HTML5 elements.",
+            "- Include Tailwind CSS CDN in the <head> section: <script src=\"https://cdn.tailwindcss.com\"></script>",
+            "- Use ONLY Tailwind CSS utility classes for styling - NO custom CSS or <style> tags.",
             "- Do NOT include explanations, markdown, or comments.",
-            "- Do NOT include external libraries or images.",
-            "- The page must be fully responsive."
+            "- Do NOT include external libraries or images (except Tailwind CDN).",
+            "- Do NOT include any JavaScript code.",
+            "- The page must be fully responsive using Tailwind's responsive classes.",
+            "- Use Tailwind's color palette and spacing system.",
+            "- Example: Use classes like 'bg-blue-500', 'text-white', 'p-4', 'rounded-lg', etc."
         ])
 
         return "\n".join(prompt_parts)

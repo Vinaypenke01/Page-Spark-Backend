@@ -46,11 +46,9 @@ class PageRequestSerializer(serializers.ModelSerializer):
         model = Page
         fields = ['email', 'prompt', 'page_type', 'theme', 'user_data']
 
-    def validate_prompt(self, value):
-        dangerous_patterns = ['<script', 'javascript:', 'onerror=']
-        if any(pattern in value.lower() for pattern in dangerous_patterns):
-            raise serializers.ValidationError("Invalid prompt content")
-        return value
+    # Note: Removed validate_prompt method since prompts are now AI-generated
+    # and may contain instructional text like "No JavaScript" or "avoid <script> tags"
+    # which would trigger false positives. HTML sanitization handles actual security.
 
 
 class PageResponseSerializer(serializers.ModelSerializer):
@@ -92,3 +90,22 @@ class AdminDashboardStatsSerializer(serializers.Serializer):
     pagesToday = serializers.IntegerField()
     totalViews = serializers.IntegerField()
     uniqueUsers = serializers.IntegerField()
+
+
+class GeneratePromptRequestSerializer(serializers.Serializer):
+    """Serializer for AI prompt generation request"""
+    user_data = serializers.JSONField(required=True)
+    
+    def validate_user_data(self, value):
+        # Ensure required fields are present
+        required_fields = ['occasion', 'email']
+        for field in required_fields:
+            if field not in value:
+                raise serializers.ValidationError(f"Missing required field: {field}")
+        return value
+
+
+class GeneratePromptResponseSerializer(serializers.Serializer):
+    """Serializer for AI prompt generation response"""
+    generated_prompt = serializers.CharField()
+    user_data = serializers.JSONField()

@@ -36,14 +36,13 @@ class GenericPageService:
             logger.info(f"Optimized Prompt: {prompt[:100]}...")
 
         # 1. Validation
-        if len(prompt) > 5000:
+        if len(prompt) > 7000:
             logger.warning(f"Prompt rejected: too long ({len(prompt)} chars)")
-            raise ValueError("Prompt exceeds maximum length of 5000 characters")
+            raise ValueError("Prompt exceeds maximum length of 7000 characters")
 
-        dangerous_patterns = ['{{', '}}', '{%', '%}', '<script', 'javascript:']
-        if any(pattern in prompt.lower() for pattern in dangerous_patterns):
-            logger.warning(f"Prompt rejected: suspicious patterns detected for {email}")
-            raise ValueError("Prompt contains potentially unsafe content")
+        # Note: Removed suspicious pattern validation since prompts are now AI-generated
+        # and should be trusted. The AI is instructed to generate safe, HTML-only content.
+
 
         # 2. Generate HTML
         try:

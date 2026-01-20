@@ -1,5 +1,7 @@
 import logging
+import requests
 from datetime import datetime
+from django.conf import settings
 from django.db.models import F, Count, Sum
 from django.http import HttpResponse
 from django.utils import timezone
@@ -188,6 +190,177 @@ class AdminDashboardView(APIView):
             'popularTypes': popular_formatted,
             'recentPages': recent_serializer.data
         })
+
+
+class GeneratePromptView(APIView):
+    """
+    Generate an AI-optimized prompt from structured user data.
+    This endpoint is called before final page generation to show users the prompt.
+    """
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    def post(self, request):
+        from .serializers import GeneratePromptRequestSerializer, GeneratePromptResponseSerializer
+        
+        serializer = GeneratePromptRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        user_data = serializer.validated_data['user_data']
+        
+        try:
+            # Use AI to generate an optimized prompt from the user data
+            generated_prompt = self._generate_prompt_with_ai(user_data)
+            
+            response_serializer = GeneratePromptResponseSerializer({
+                'generated_prompt': generated_prompt,
+                'user_data': user_data
+            })
+            
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Prompt generation error: {str(e)}", exc_info=True)
+            return Response(
+                {'error': 'Failed to generate prompt. Please try again.'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def _generate_prompt_with_ai(self, user_data):
+        """Use OpenRouter AI to generate an optimized prompt from user data"""
+        
+        # Extract key information
+        occasion = user_data.get('occasion', 'generic').replace('_', ' ').title()
+        title = user_data.get('title', '')
+        theme = user_data.get('theme', 'modern')
+        font = user_data.get('font', 'sans')
+        
+        # Create a meta-prompt for the AI to generate the actual prompt
+        meta_prompt = f"""You are a professional prompt engineer specializing in web design. Generate a highly detailed, optimized prompt for creating a stunning {occasion} invitation web page.
+
+User Requirements:
+- Page Title: {title}
+- Theme: {theme}
+- Font Style: {font}
+- Occasion: {occasion}
+
+User Data:
+{self._format_user_data(user_data)}
+
+Generate a comprehensive, effective prompt that will result in a BEAUTIFUL, MODERN, and PROFESSIONAL web page. The prompt MUST include:
+
+1. **Page Purpose & Context**
+   - Clearly describe this is a {occasion} invitation page
+   - Explain the target audience and desired emotional impact
+   - Specify the overall tone (elegant, fun, professional, etc.)
+
+2. **Visual Design Requirements** (CRITICAL - Be very specific)
+   - Use a {theme} theme with a sophisticated color palette
+   - Implement modern design trends: gradients, subtle shadows, smooth animations
+   - Use {font} fonts with proper typography hierarchy
+   - Include visual elements: decorative borders, icons, background patterns
+   - Ensure generous white space and balanced layouts
+   - Add hover effects and micro-interactions for engagement
+
+3. **Tailwind CSS Implementation** (MANDATORY)
+   - MUST include Tailwind CSS CDN link in the HTML
+   - Use ONLY Tailwind utility classes for ALL styling
+   - Specify exact Tailwind classes for: colors, spacing, typography, shadows, gradients
+   - Examples: "bg-gradient-to-r from-purple-600 to-pink-600", "shadow-2xl", "hover:scale-105 transition-transform"
+   - NO custom CSS or <style> tags allowed
+   - Use Tailwind's responsive classes (sm:, md:, lg:, xl:)
+
+4. **Layout & Structure**
+   - Responsive design that works on mobile, tablet, and desktop
+   - Clear visual hierarchy with hero section, details section, and call-to-action
+   - Use Tailwind's flexbox/grid utilities for layouts
+   - Include all user-provided details in an organized, visually appealing way
+
+5. **Content Sections to Include**
+   - Eye-catching header with title and decorative elements
+   - Main content area with all event details
+   - Visual separators between sections
+   - Footer with additional information or RSVP details
+
+6. **Technical Requirements**
+   - Pure HTML with Tailwind CSS CDN
+   - No JavaScript, no external images (use Tailwind's built-in features)
+   - Semantic HTML5 elements
+   - Accessible and SEO-friendly markup
+
+7. **Quality Standards**
+   - The page should look PREMIUM and PROFESSIONAL
+   - Use vibrant, harmonious colors from Tailwind's palette
+   - Implement smooth transitions and subtle animations
+   - Ensure the design would impress users at first glance
+
+Output a detailed, structured prompt (500-800 words) that an AI can follow to generate a stunning web page. Be VERY specific about Tailwind classes, colors, and design elements. The resulting page should be worthy of a professional designer's portfolio.
+
+Output ONLY the prompt text, no explanations or meta-commentary."""
+
+        # Call OpenRouter AI
+        payload = {
+            "model": settings.OPENROUTER_MODEL,
+            "messages": [
+                {"role": "system", "content": "You are an expert prompt engineer who creates detailed, effective prompts for generating beautiful, professional web pages. You specialize in Tailwind CSS and modern UI/UX design."},
+                {"role": "user", "content": meta_prompt}
+            ],
+            "temperature": 0.7,
+            "max_tokens": 2500
+        }
+
+        headers = {
+            "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://pagegen.app",
+            "X-Title": "PageSpark AI"
+        }
+
+        try:
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                json=payload,
+                headers=headers,
+                timeout=30
+            )
+            response.raise_for_status()
+            
+            data = response.json()
+            if "choices" not in data or not data["choices"]:
+                raise ValueError("Invalid AI response")
+            
+            generated_prompt = data["choices"][0]["message"]["content"].strip()
+            logger.info(f"AI-generated prompt length: {len(generated_prompt)} chars")
+            
+            return generated_prompt
+            
+        except Exception as e:
+            logger.error(f"AI prompt generation failed: {str(e)}")
+            # Fallback to static meta-prompt if AI fails
+            from .meta_prompt import MetaPromptService
+            return MetaPromptService.construct_prompt(user_data)
+    
+    def _format_user_data(self, user_data):
+        """Format user data for display in meta-prompt"""
+        lines = []
+        exclude_keys = ['occasion', 'email', 'theme', 'title', 'specific_fields', 'font', 'language', 'color', 'generatedPrompt', 'prompt']
+        
+        for key, value in user_data.items():
+            if key not in exclude_keys and value:
+                readable_key = key.replace('_', ' ').title()
+                lines.append(f"- {readable_key}: {value}")
+        
+        # Add specific fields
+        specific_fields = user_data.get('specific_fields', {})
+        if specific_fields:
+            lines.append("\nOccasion-Specific Details:")
+            for key, value in specific_fields.items():
+                if value and value != 'undefined':
+                    readable_key = key.replace('_', ' ').title()
+                    lines.append(f"- {readable_key}: {value}")
+        
+        return '\n'.join(lines) if lines else "No additional details provided"
 
 
 class AdminMeView(APIView):

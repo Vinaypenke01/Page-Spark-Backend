@@ -6,12 +6,14 @@ from .views import (
     AdminDashboardView, 
     AdminRegisterView,
     CustomTokenObtainPairView,
-    AdminMeView
+    AdminMeView,
+    GeneratePromptView
 )
 
 urlpatterns = [
     # Public API
     path('api/generate/', GeneratePageView.as_view(), name='generate-page'),
+    path('api/generate-prompt/', GeneratePromptView.as_view(), name='generate-prompt'),
     path('api/history/', UserHistoryView.as_view(), name='user-history'),
     
     # Auth API
