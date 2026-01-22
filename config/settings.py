@@ -146,10 +146,11 @@ else:
     CORS_ALLOW_CREDENTIALS = True
 
 # ==============================================================================
-# External API Configuration
+# External API Configuration - Groq (Free AI Provider)
 # ==============================================================================
-OPENROUTER_API_KEY = env('OPENROUTER_API_KEY')  # FIXED: Was incorrectly using OPENAI_API_KEY
-OPENROUTER_MODEL = env('OPENROUTER_MODEL', default='mistralai/mistral-7b-instruct:free')
+GROQ_API_KEY = env('GROQ_API_KEY')
+GROQ_PROMPT_MODEL = env('GROQ_PROMPT_MODEL', default='llama-3.3-70b-versatile')  # For prompt generation
+GROQ_HTML_MODEL = env('GROQ_HTML_MODEL', default='llama-3.1-8b-instant')  # For HTML generation
 
 # ==============================================================================
 # Django REST Framework Configuration
@@ -281,7 +282,7 @@ SPECTACULAR_SETTINGS = {
 # ==============================================================================
 from django.core.exceptions import ImproperlyConfigured
 
-required_env_vars = ['SECRET_KEY', 'DATABASE_URL', 'OPENROUTER_API_KEY']
+required_env_vars = ['SECRET_KEY', 'DATABASE_URL', 'GROQ_API_KEY']
 
 for var in required_env_vars:
     if not env(var, default=None):

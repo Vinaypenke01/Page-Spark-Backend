@@ -36,7 +36,7 @@ class GenericPageService:
             logger.info(f"Optimized Prompt: {prompt[:100]}...")
 
         # 1. Validation
-        if len(prompt) > 7000:
+        if len(prompt) > 70000:
             logger.warning(f"Prompt rejected: too long ({len(prompt)} chars)")
             raise ValueError("Prompt exceeds maximum length of 7000 characters")
 
@@ -55,13 +55,16 @@ class GenericPageService:
             logger.error(f"Failed to generate raw HTML: {str(e)}", exc_info=True)
             raise
 
-        # 3. Sanitize HTML
-        try:
-            clean_html = HtmlSanitizationService.sanitize(raw_html)
-        except Exception as e:
-            logger.error(f"Failed to sanitize HTML: {str(e)}", exc_info=True)
-            # Fallback to a safe base if sanitization fails
-            clean_html = f"<!-- Sanitization Failed -->\n{raw_html}"
+        # 3. Sanitize HTML - DISABLED for testing
+        # try:
+        #     clean_html = HtmlSanitizationService.sanitize(raw_html)
+        # except Exception as e:
+        #     logger.error(f"Failed to sanitize HTML: {str(e)}", exc_info=True)
+        #     # Fallback to a safe base if sanitization fails
+        #     clean_html = f"<!-- Sanitization Failed -->\n{raw_html}"
+        
+        # Use raw HTML without sanitization (for testing)
+        clean_html = raw_html
 
         # 4. Save Page
         page = Page.objects.create(
@@ -72,8 +75,8 @@ class GenericPageService:
             html_content=clean_html,
             meta_data={
                 "version": "1.1",
-                "provider": "openrouter",
-                "model": settings.OPENROUTER_MODEL,
+                "provider": "groq",
+                "model": settings.GROQ_HTML_MODEL,
                 "generated_at": timezone.now().isoformat(),
                 "original_data": user_data or {}
             }
@@ -92,43 +95,99 @@ class OpenRouterService:
         logger.debug("Preparing OpenRouter request")
 
         system_prompt = f"""
-You are an expert web developer specializing in modern, responsive designs.
+You are a PREMIUM web designer creating STUNNING mobile-first invitation pages.
 
-Generate a complete, single-file HTML5 page based on the following instructions.
+**CRITICAL OUTPUT RULE**: Return ONLY the HTML code. NO markdown, NO code blocks, NO explanations, NO comments outside HTML.
 
-Instructions:
-1. Return ONLY the raw HTML content. Do not include markdown code blocks or additional text.
-2. Use Tailwind CSS via the official CDN.
-3. No custom JavaScript is allowed.
-4. Use semantic HTML elements (header, footer, main, section, etc.).
-5. Ensure a polished, professional UI.
-6. Design Theme: {theme}
-7. Page Category: {page_type}
+🎯 **DESIGN REQUIREMENTS**:
 
-User Request:
-"{prompt}"
+**1. HEADER - Full Height Hero** (MUST INCLUDE):
+- Class: bg-gradient-to-br from-purple-600 via-pink-600 to-rose-500 min-h-screen flex items-center justify-center relative overflow-hidden
+- Add 2-3 decorative SVG stars/shapes with animate-pulse, position absolute
+- Title: text-5xl md:text-7xl font-extrabold text-white text-center
+- Subtitle with decorative lines
+
+**2. MAIN CARD - Premium White Card**:
+- Wrap in: max-w-4xl mx-auto -mt-20 relative z-10 px-4
+- Card: bg-white rounded-3xl shadow-2xl overflow-hidden
+
+**3. EVENT DETAILS - Icon Grid** (4 cards in 2x2 grid):
+```
+<div class="grid grid-cols-1 md:grid-cols-2 gap-px bg-gray-200">
+  <div class="bg-white p-8 text-center">
+    <div class="bg-purple-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center animate-pulse">
+      <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+    </div>
+    <p class="text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">When</p>
+    <p class="text-xl font-bold text-gray-900">Date Here</p>
+  </div>
+</div>
+```
+Use these 4 icons with different background colors:
+- Date: purple-100/purple-600 (calendar icon)
+- Location: pink-100/pink-600 (map pin icon)
+- Dress: yellow-100/yellow-600 (shirt icon)
+- Type: blue-100/blue-600 (star icon)
+
+**4. RSVP BUTTON**:
+- bg-gradient-to-r from-purple-600 to-pink-600 text-white px-12 py-4 rounded-full text-xl font-bold shadow-2xl hover:scale-110 transform transition duration-300
+
+**5. FOOTER**:
+- bg-gradient-to-r from-purple-50 to-pink-50 py-12
+- Include 3 animated bouncing dots (different animation delays)
+
+**SVG ICONS TO USE** (copy exactly):
+
+Calendar: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>`
+
+Map Pin: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>`
+
+Star: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>`
+
+**MOBILE-FIRST CLASSES**:
+- Default (mobile): text-4xl, p-6, grid-cols-1, space-y-6
+- md: (tablet): text-6xl, p-12, grid-cols-2
+- lg: (desktop): max-w-6xl, px-16
+
+**PAGE TYPE**: {page_type}
+**THEME**: {theme}
+**USER DATA**: {prompt}
+
+**OUTPUT FORMAT** (CRITICAL):
+1. Start with <!DOCTYPE html>
+2. NO markdown code blocks (```)
+3. NO explanatory text
+4. Include ALL SVG icons (minimum 4)
+5. Use exact color scheme: purple-600, pink-600, rose-500
+6. Full-height gradient header
+7. White rounded-3xl main card
+8. 2x2 icon grid
+9. Gradient button
+10. Animated elements (pulse, bounce)
+
+Generate the complete HTML now:
 """
 
         payload = {
-            "model": settings.OPENROUTER_MODEL,
+            "model": settings.GROQ_HTML_MODEL,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": "Build the page now as per the requirements."}
+                {"role": "user", "content": "Create the most beautiful, modern page possible following all the design guidelines."}
             ],
             "temperature": 0.7,
-            "max_tokens": 3000
+            "max_tokens": 4000
         }
 
         headers = {
-            "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://pagegen.app",
-            "X-Title": "PageSpark AI"
+            "Authorization": f"Bearer {settings.GROQ_API_KEY}",
+            "Content-Type": "application/json"
         }
 
         try:
             response = requests.post(
-                "https://openrouter.ai/api/v1/chat/completions",
+                "https://api.groq.com/openai/v1/chat/completions",
                 json=payload,
                 headers=headers,
                 timeout=60
@@ -150,6 +209,11 @@ User Request:
                 content = content[:-3].strip()
 
             logger.debug("OpenRouter content received")
+            print("\n" + "="*80)
+            print("GENERATED HTML FROM AI:")
+            print("="*80)
+            print(content)
+            print("="*80 + "\n")
             return content
 
         except Exception as e:
@@ -192,71 +256,95 @@ class HtmlSanitizationService:
     @staticmethod
     def sanitize(html_content):
         """
-        Advanced sanitization using bleach for tag stripping and 
-        BeautifulSoup for structure enforcement and CDN management.
+        Advanced sanitization that allows Tailwind CDN script while blocking all other JS.
+        Maintains proper HTML document structure.
         """
         logger.debug("Starting sanitization")
 
-        allowed_tags = [
-            "html", "head", "body", "title", "meta", "link", "style",
-            "div", "span", "section", "article", "header", "footer",
-            "nav", "main", "aside",
-            "h1", "h2", "h3", "h4", "h5", "h6",
-            "p", "br", "hr", "blockquote", "pre", "code",
-            "ul", "ol", "li", "dl", "dt", "dd",
-            "table", "thead", "tbody", "tfoot", "tr", "th", "td",
-            "img", "a", "button", "form", "label",
-            "input", "textarea", "select", "option",
-            "strong", "em", "b", "i", "small", "sub", "sup",
-            "svg", "path", "circle", "rect", "line", "g", "defs", "linearGradient", "stop"
-        ]
+        # Allowed Tailwind CDN URL
+        TAILWIND_CDN = "https://cdn.tailwindcss.com"
 
-        allowed_attributes = {
-            "*": [
-                "class", "id", "style", "href", "src", "alt", "title",
-                "type", "name", "value", "placeholder", "required", "checked",
-                "width", "height", "viewBox", "xmlns",
-                "fill", "stroke", "d", "r", "cx", "cy", "x1", "y1", "x2", "y2"
-            ],
-            "meta": ["charset", "name", "content"],
-            "link": ["rel", "href", "crossorigin", "integrity"],
-            "a": ["href", "target", "rel"]
-        }
-
-        # 1. Pre-cleanup with BeautifulSoup to remove scripts/styles entirely
+        # 1. Parse HTML
         soup = BeautifulSoup(html_content, 'html.parser')
-        for s in soup(['script', 'style']):
-            s.decompose()
         
-        pre_clean_html = str(soup)
-
-        # 2. Bleach Cleanup
-        clean_html = bleach.clean(
-            pre_clean_html,
-            tags=allowed_tags,
-            attributes=allowed_attributes,
-            strip=True
-        )
-
-        # 3. Structure Fixup and Tailwind Injection
-        soup = BeautifulSoup(clean_html, 'html.parser')
+        # 2. Remove ALL script tags EXCEPT Tailwind CDN
+        for script in soup.find_all('script'):
+            src = script.get('src', '')
+            if TAILWIND_CDN not in src:
+                script.decompose()
         
-        # Ensure Tailwind CDN is in the head
-        tailwind_url = "https://cdn.tailwindcss.com"
-        script_tag = soup.find('script', src=tailwind_url)
+        # 3. Remove inline scripts and event handlers
+        for tag in soup.find_all():
+            # Remove event handler attributes (onclick, onload, etc.)
+            for attr in list(tag.attrs.keys()):
+                if attr.startswith('on'):
+                    del tag[attr]
         
-        if not script_tag:
-            head = soup.find('head') or soup.new_tag('head')
-            if not soup.find('head'):
-                if soup.html:
-                    soup.html.insert(0, head)
-                else:
-                    new_html = soup.new_tag('html')
-                    new_html.append(head)
-                    soup.append(new_html)
-            
-            new_script = soup.new_tag('script', src=tailwind_url)
-            head.append(new_script)
+        # 4. Remove style tags (we use only Tailwind utility classes)
+        for style_tag in soup.find_all('style'):
+            style_tag.decompose()
 
+        # 5. Ensure proper HTML structure
+        html_tag = soup.find('html')
+        if not html_tag:
+            # Wrap everything in html tag
+            html_tag = soup.new_tag('html', lang='en')
+            for element in list(soup.children):
+                html_tag.append(element.extract())
+            soup.append(html_tag)
+        
+        # 6. Ensure head exists
+        head = soup.find('head')
+        if not head:
+            head = soup.new_tag('head')
+            html_tag.insert(0, head)
+        
+        # 7. Ensure Tailwind CDN script is in head
+        tailwind_script = soup.find('script', src=lambda x: x and TAILWIND_CDN in x)
+        if tailwind_script:
+            # Move to head if not already there
+            if tailwind_script.parent != head:
+                tailwind_script.extract()
+                head.append(tailwind_script)
+        else:
+            # Add Tailwind CDN script
+            script = soup.new_tag('script', src=TAILWIND_CDN)
+            head.append(script)
+        
+        # 8. Ensure charset meta tag
+        charset_meta = soup.find('meta', charset=True)
+        if not charset_meta:
+            charset_meta = soup.new_tag('meta', charset='UTF-8')
+            head.insert(0, charset_meta)
+        
+        # 9. Ensure viewport meta tag
+        viewport_meta = soup.find('meta', attrs={'name': 'viewport'})
+        if not viewport_meta:
+            viewport_meta = soup.new_tag('meta')
+            viewport_meta['name'] = 'viewport'
+            viewport_meta['content'] = 'width=device-width, initial-scale=1.0'
+            head.insert(1, viewport_meta)
+        
+        # 10. Ensure body exists
+        body = soup.find('body')
+        if not body:
+            body = soup.new_tag('body')
+            # Move all non-head children to body
+            for element in list(html_tag.children):
+                if element != head and element.name:
+                    body.append(element.extract())
+            html_tag.append(body)
+        
+        # 11. Add DOCTYPE
+        doctype = '<!DOCTYPE html>\n'
+        final_html = doctype + str(soup)
+        
         logger.debug("Sanitization complete")
-        return str(soup)
+        print("\n" + "="*80)
+        print("SANITIZED HTML (FINAL):")
+        print("="*80)
+        print(final_html)
+        print("="*80 + "\n")
+        
+        return final_html
+

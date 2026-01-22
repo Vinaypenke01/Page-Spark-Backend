@@ -299,9 +299,9 @@ Output a detailed, structured prompt (500-800 words) that an AI can follow to ge
 
 Output ONLY the prompt text, no explanations or meta-commentary."""
 
-        # Call OpenRouter AI
+        # Call Groq AI
         payload = {
-            "model": settings.OPENROUTER_MODEL,
+            "model": settings.GROQ_PROMPT_MODEL,
             "messages": [
                 {"role": "system", "content": "You are an expert prompt engineer who creates detailed, effective prompts for generating beautiful, professional web pages. You specialize in Tailwind CSS and modern UI/UX design."},
                 {"role": "user", "content": meta_prompt}
@@ -311,18 +311,16 @@ Output ONLY the prompt text, no explanations or meta-commentary."""
         }
 
         headers = {
-            "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://pagegen.app",
-            "X-Title": "PageSpark AI"
+            "Authorization": f"Bearer {settings.GROQ_API_KEY}",
+            "Content-Type": "application/json"
         }
 
         try:
             response = requests.post(
-                "https://openrouter.ai/api/v1/chat/completions",
+                "https://api.groq.com/openai/v1/chat/completions",
                 json=payload,
                 headers=headers,
-                timeout=30
+                timeout=60
             )
             response.raise_for_status()
             
@@ -335,11 +333,13 @@ Output ONLY the prompt text, no explanations or meta-commentary."""
             
             return generated_prompt
             
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"AI prompt generation failed: {str(e)}")
+            logger.error(f"Response content: {e.response.text if hasattr(e, 'response') else 'No response'}")
+            raise ValueError(f"OpenRouter API error: {str(e)}")
         except Exception as e:
             logger.error(f"AI prompt generation failed: {str(e)}")
-            # Fallback to static meta-prompt if AI fails
-            from .meta_prompt import MetaPromptService
-            return MetaPromptService.construct_prompt(user_data)
+            raise
     
     def _format_user_data(self, user_data):
         """Format user data for display in meta-prompt"""
