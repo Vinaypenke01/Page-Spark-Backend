@@ -25,10 +25,10 @@
 
 ## 🎯 Overview
 
-**LivePage Backend** is a Django REST Framework (DRF) powered backend service that generates AI-powered HTML pages on demand. Users submit prompts via API, and the system leverages OpenRouter AI to generate complete, sanitized, single-file HTML pages with Tailwind CSS styling.
+**LivePage Backend** is a Django REST Framework (DRF) powered backend service that generates AI-powered HTML pages on demand. Users submit prompts via API, and the system leverages Groq AI to generate complete, sanitized, single-file HTML pages with Tailwind CSS styling.
 
 ### Key Capabilities
-- ✅ AI-powered HTML generation via OpenRouter (Mistral 7B)
+- ✅ AI-powered HTML generation via Groq (Llama 3.3 70B & Llama 3.1 8B)
 - ✅ Comprehensive HTML sanitization to prevent XSS attacks
 - ✅ User history tracking by email
 - ✅ Live page serving with view count analytics
@@ -271,10 +271,94 @@ class Page(models.Model):
 | Framework | Django | 6.0 |
 | API Framework | Django REST Framework | 3.x |
 | Database | PostgreSQL | Latest |
-| AI Provider | OpenRouter (Mistral 7B) | API v1 |
+| AI Provider | Groq (Llama Models) | API v1 |
 | HTML Sanitization | Bleach | Latest |
 | Environment Management | django-environ | Latest |
 | CORS Handling | django-cors-headers | Latest |
+
+---
+
+## 🤖 AI Models
+
+This project leverages **Groq AI** for fast, efficient AI-powered content generation using two specialized Llama models:
+
+### **Model Architecture**
+
+```
+┌─────────────────────────────────────────────┐
+│          User Input (Structured Data)       │
+└──────────────────┬──────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────┐
+│     Meta-Prompt Generation (Step 1)         │
+│  Model: llama-3.3-70b-versatile             │
+│  Purpose: Prompt Optimization               │
+│  - Converts user data to detailed prompts   │
+│  - Ensures design consistency                │
+│  - Optimizes for better output quality       │
+└──────────────────┬──────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────┐
+│       HTML Generation (Step 2)              │
+│  Model: llama-3.1-8b-instant                │
+│  Purpose: Fast HTML Generation              │
+│  - Creates responsive HTML pages             │
+│  - Applies Tailwind CSS styling             │
+│  - Follows design guidelines                 │
+└──────────────────┬──────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────┐
+│        Sanitization & Storage               │
+└─────────────────────────────────────────────┘
+```
+
+### **Model 1: llama-3.3-70b-versatile**
+- **Role**: Meta-Prompting & Prompt Generation
+- **Purpose**: Converts structured user input into optimized, detailed design prompts
+- **Configuration**: `GROQ_PROMPT_MODEL` in settings
+- **Capabilities**:
+  - Natural language understanding
+  - Context-aware prompt construction
+  - Design requirement interpretation
+  - Occasion-specific customization
+
+### **Model 2: llama-3.1-8b-instant**
+- **Role**: HTML Content Generation
+- **Purpose**: Generates complete, responsive HTML pages with Tailwind CSS
+- **Configuration**: `GROQ_HTML_MODEL` in settings
+- **Capabilities**:
+  - Fast HTML generation (optimized for speed)
+  - Tailwind CSS utility class integration
+  - Semantic HTML5 structure
+  - Mobile-first responsive design
+  - Pure HTML output (no JavaScript execution)
+
+### **Why Two Models?**
+
+1. **Separation of Concerns**: 
+   - **70B Versatile**: Better at understanding complex requirements and creating comprehensive design prompts
+   - **8B Instant**: Optimized for speed, perfect for quick HTML generation
+
+2. **Performance Optimization**:
+   - Using the faster 8B model for HTML generation reduces latency
+   - The 70B model ensures high-quality prompt construction upfront
+
+3. **Cost Efficiency**:
+   - Groq provides free tier access with generous rate limits
+   - Smaller model for high-frequency HTML generation keeps costs low
+
+### **Configuration**
+
+Set these environment variables in your `.env` file:
+
+```env
+# Groq AI Configuration
+GROQ_API_KEY=your-groq-api-key-here
+GROQ_PROMPT_MODEL=llama-3.3-70b-versatile  # Optional, default shown
+GROQ_HTML_MODEL=llama-3.1-8b-instant       # Optional, default shown
+```
+
+**Get your Groq API key**: [https://console.groq.com/](https://console.groq.com/)
 
 ---
 
@@ -318,7 +402,7 @@ backend/
 ### Prerequisites
 - Python 3.8+
 - PostgreSQL installed and running
-- OpenRouter API key ([Get one here](https://openrouter.ai/))
+- Groq API key ([Get one here](https://console.groq.com/))
 
 ### Step 1: Clone and Setup Environment
 ```bash
@@ -349,8 +433,10 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 # Database Configuration
 DATABASE_URL=postgres://username:password@localhost:5432/livepage_db
 
-# OpenRouter AI Configuration
-OPENROUTER_API_KEY=your-openrouter-api-key
+# Groq AI Configuration
+GROQ_API_KEY=your-groq-api-key-here
+GROQ_PROMPT_MODEL=llama-3.3-70b-versatile  # Optional, defaults to this
+GROQ_HTML_MODEL=llama-3.1-8b-instant       # Optional, defaults to this
 ```
 
 ### Step 4: Database Setup
@@ -585,7 +671,9 @@ Test outputs saved to: `test_results.txt`
 | `DEBUG` | ❌ No | Debug mode | `True` / `False` |
 | `ALLOWED_HOSTS` | ❌ No | Allowed hostnames | `localhost,127.0.0.1` |
 | `DATABASE_URL` | ✅ Yes | PostgreSQL connection | `postgres://user:pass@localhost/db` |
-| `OPENROUTER_API_KEY` | ✅ Yes | OpenRouter API key | `sk-or-v1-...` |
+| `GROQ_API_KEY` | ✅ Yes | Groq API key | `gsk_...` |
+| `GROQ_PROMPT_MODEL` | ❌ No | Prompt generation model | `llama-3.3-70b-versatile` |
+| `GROQ_HTML_MODEL` | ❌ No | HTML generation model | `llama-3.1-8b-instant` |
 
 ---
 
@@ -626,7 +714,7 @@ STATIC_URL = 'static/'
 - [ ] Set up monitoring (Sentry, New Relic)
 - [ ] Implement database backups
 - [ ] Add rate limiting
-- [ ] Review OpenRouter API quotas
+- [ ] Review Groq API quotas and rate limits
 
 ### Recommended Production Stack
 
@@ -742,7 +830,8 @@ For issues or questions:
 
 - [Django Documentation](https://docs.djangoproject.com/)
 - [Django REST Framework](https://www.django-rest-framework.org/)
-- [OpenRouter API Docs](https://openrouter.ai/docs)
+- [Groq API Documentation](https://console.groq.com/docs)
+- [Llama Models Documentation](https://www.llama.com/)
 - [Bleach Documentation](https://bleach.readthedocs.io/)
 
 ---
