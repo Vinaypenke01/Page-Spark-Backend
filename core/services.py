@@ -56,16 +56,13 @@ class GenericPageService:
             logger.error(f"Failed to generate raw HTML: {str(e)}", exc_info=True)
             raise
 
-        # 3. Sanitize HTML - DISABLED for testing
-        # try:
-        #     clean_html = HtmlSanitizationService.sanitize(raw_html)
-        # except Exception as e:
-        #     logger.error(f"Failed to sanitize HTML: {str(e)}", exc_info=True)
-        #     # Fallback to a safe base if sanitization fails
-        #     clean_html = f"<!-- Sanitization Failed -->\n{raw_html}"
-        
-        # Use raw HTML without sanitization (for testing)
-        clean_html = raw_html
+        # 3. Sanitize HTML - RE-ENABLED with CDN support
+        try:
+            clean_html = HtmlSanitizationService.sanitize(raw_html)
+        except Exception as e:
+            logger.error(f"Failed to sanitize HTML: {str(e)}", exc_info=True)
+            # Fallback to a safe base if sanitization fails
+            clean_html = f"<!-- Sanitization Failed -->\n{raw_html}"
 
         # 4. Save Page
         page = Page.objects.create(
@@ -75,7 +72,7 @@ class GenericPageService:
             theme=theme,
             html_content=clean_html,
             meta_data={
-                "version": "1.1",
+                "version": "1.8",
                 "provider": "groq",
                 "model": settings.GROQ_HTML_MODEL,
                 "generated_at": timezone.now().isoformat(),
@@ -96,44 +93,38 @@ class OpenRouterService:
         logger.debug("Preparing OpenRouter request")
 
         system_prompt = f"""
-You are an EXPERT FRONTEND ENGINEER specializing in clean, semantic, and production-ready HTML/Tailwind CSS.
-Your goal is to build a high-quality, fully responsive, and bug-free single-page website for the user's request.
+You are an EXPERT FRONTEND ENGINEER specializing in award-winning UI/UX built with clean, semantic HTML/Tailwind CSS.
+Your goal is to build a breathtaking, high-performance storytelling masterpiece.
+
+**VISUAL NARRATIVE CONTRACT (v1.9)**:
+1. **ZERO HALLUCINATED UTILITIES**: PROHIBITED: inventing font utility classes (e.g., no `font-GreatVibes`). Use ONLY inline `style` for script fonts. All body text MUST be clean Sans-serif.
+2. **NARRATIVE ARCHITECTURE**: Hero MUST include a dominant headline + an elegant, adult subtitle. The Special Message MUST have its own heading or subtle icon and a soft, neutral background as a rhythm break.
+3. **PERSONAL FRAMING**: Visual section MUST use deeply personal narrative framing (referencing names like Sarah, the surprise, the celebration) to give icon clusters purpose.
+4. **SCANNABILITY**: Make Labels (Date:, Location:) bold/dark vs Regular Values. Use a structured 'Label: Value' pattern.
+5. **RHYTHM & CONTRAST**: Introduce neutral breaks (off-white/light gray) between high-energy sections. Ensure high contrast for yellow/gradient elements.
+6. **RSVP URGENCY**: Add a short urgency cue below the primary CTA. 
+7. **MEMORABLE GOODBYE**: Footer MUST be a warm, personal send-off reinforcing the celebration's spirit.
 
 **STRUCTURAL DISCIPLINE**:
-1. **Mandatory Section Order**: You MUST include these sections in this exact order:
-   - Hero / Header (Impactful entry)
-   - Event Details (Clear logistics: Date, Time, Venue)
-   - Special Message (Key context/narrative)
-   - Image / Visual Section (Placeholders for atmosphere)
-   - RSVP / CTA (Actionable element)
-   - Footer (Closing info)
-2. **NO Repetition**: Every section must appear ONLY ONCE. Do not duplicate headings, content blocks, or UI elements.
-3. **MANDATORY Responsiveness**: The page MUST be perfectly responsive and look stunning on all devices (mobile, tablet, and desktop).
-
-**CONTENT QUALITY**:
-- **Meaningful Text**: PROHIBITED: "asdf", random characters, "Lorem Ipsum", or nonsense placeholders. 
-- You MUST write meaningful, emotionally resonant, and context-aware text that serves the user's occasion.
-- All tags must be properly nested, opened, and closed. Ensure 100% valid HTML5 DOM structure.
+- Order: Hero -> Event Details -> Special Message -> Visual Section (Story Framing) -> RSVP -> Footer.
+- Each block must appear EXACTLY once.
+- Quality: Adult tone for adult milestones. NO "Lorem Ipsum".
 
 **TECHNICAL REQUIREMENTS**:
 - **Output**: ONLY valid, standalone HTML5 code.
-- **Styling**: Use ONLY Tailwind CSS via CDN.
-- **Fonts**: Use Google Fonts via CDN.
-- **Icons**: Use FontAwesome or RemixIcon via CDN.
-- **Interactivity**: Use subtle, professional CSS animations and transitions (avoid over-engineering).
+- **Styling/Fonts/Icons**: ONLY Tailwind CSS, Google Fonts, and FontAwesome/RemixIcon via CDN.
 
 **CRITICAL RULES**:
 1. Start directly with `<!DOCTYPE html>`.
 2. NO Markdown code blocks.
-3. NO conversational text or explanations.
-4. Remove `<think>` tags.
+3. Remove `<think>` tags.
 
 **CONTEXT**:
 - **Page Type**: {page_type}
 - **Theme**: {theme}
 - **User Prompt**: {prompt}
 
-Generate the production-ready HTML now following all structural rules.
+Build the production-ready masterpiece v1.8 now.
 """
 
         payload = {
@@ -237,10 +228,22 @@ class HtmlSanitizationService:
         # 1. Parse HTML
         soup = BeautifulSoup(html_content, 'html.parser')
         
-        # 2. Remove ALL script tags EXCEPT Tailwind CDN
+        # 2. Clean old scripts and remove all script tags EXCEPT allowed CDNs
+        ALLOWED_SCRIPTS = [
+            TAILWIND_CDN,
+            "cdnjs.cloudflare.com",
+            "kit.fontawesome.com"
+        ]
+        
+        # Track if we found a tailwind script to keep exactly ONE later
+        tailwind_script_found = False
+        
         for script in soup.find_all('script'):
             src = script.get('src', '')
-            if TAILWIND_CDN not in src:
+            # If it's a tailwind script, we extract it and we'll re-inject exactly one in head
+            if TAILWIND_CDN in src:
+                script.decompose()
+            elif not any(allowed in src for allowed in ALLOWED_SCRIPTS):
                 script.decompose()
         
         # 3. Remove inline scripts and event handlers
@@ -295,19 +298,23 @@ class HtmlSanitizationService:
             viewport_meta['content'] = 'width=device-width, initial-scale=1.0'
             head.insert(1, viewport_meta)
         
-        # 10. Ensure body exists
-        body = soup.find('body')
-        if not body:
-            body = soup.new_tag('body')
-            # Move all non-head children to body
-            for element in list(html_tag.children):
-                if element != head and element.name:
-                    body.append(element.extract())
-            html_tag.append(body)
+        # 10. Final check for duplicate head elements
+        # Ensure only one tailwind include exists
+        tw_scripts = soup.find_all('script', src=lambda x: x and TAILWIND_CDN in x)
+        if len(tw_scripts) > 1:
+            for s in tw_scripts[1:]:
+                s.decompose()
         
-        # 11. Add DOCTYPE
-        doctype = '<!DOCTYPE html>\n'
-        final_html = doctype + str(soup)
+        # 11. Final Assembly with Strict Singleton DOCTYPE
+        # We use soup.encode() to maintain exactly what's parsed
+        final_body = str(soup).strip()
+        
+        # Remove any internal DOCTYPE tags if they were parsed as text
+        if final_body.lower().startswith('<!doctype html>'):
+            # It already has it, just normalize the casing
+            final_html = '<!DOCTYPE html>\n' + final_body[15:].strip()
+        else:
+            final_html = '<!DOCTYPE html>\n' + final_body
         
         logger.debug("Sanitization complete")
         print("\n" + "="*80)

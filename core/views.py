@@ -250,14 +250,23 @@ User Data:
 
 Generate a professional, structured prompt for an expert frontend engineer to build a high-quality {occasion} invitation page. 
 
-The prompt MUST include:
-1. **Mandatory Section Order**: Enforce a strict sequence: Hero Header, Event Details, Special Message, Visual Section, RSVP, and Footer.
-2. **Technical Discipline**: Demand 100% valid HTML5 with proper tag closure and no repetition of sections or headings.
-3. **Meaningful Content**: Instruct the engineer to write emotionally resonant and context-aware text, explicitly banning "Lorem Ipsum" and nonsense characters.
-4. **Visual Style**: Recommend a '{theme}' aesthetic with suitable Google Fonts and CDN-based icons (FontAwesome/RemixIcon).
-5. **MANDATORY Responsiveness**: Ensure the page is perfectly responsive across all device sizes.
+The prompt MUST be divided into two layers:
 
-Output ONLY the prompt text (500-800 words), focused on production stability and technical quality. No explanations or meta-commentary."""
+**Layer 1: Engineering & Emotional Contract (LOCKED)**
+1. **Clean Code & Font Policy**: Use ONLY valid Tailwind colors. PROHIBITED: inventing font utility classes (e.g., no `font-GreatVibes`). Use inline styles for custom script fonts. 
+2. **Scannability**: Make Labels (Date:, Location:) bold/dark vs Regular Values. Structure as 'Label: Value'.
+3. **Hero & Message Identity**: Hero MUST include an elegant headline + adult subtitle. Special Message must have its own header (e.g., 'A Note of Joy') and a neutral/soft background.
+4. **Content Safety & Tone**: NEVER output gibberish. Use deeply personal narrative framing (referencing names like Sarah, the surprise, the celebration energy).
+
+**Layer 2: Visual Rhythm & Impact (FLEXIBLE)**
+1. **Rhythm Softening**: Introduce neutral contrast sections (off-white/light gray) between high-energy blocks to prevent color fatigue.
+2. **RSVP Urgency**: Primary CTA MUST have an urgency cue below (e.g., 'RSVP by...'). 
+3. **Narrative Visuals**: Visual section must use personal framing text and icon clusters to create an emotional vibe.
+4. **Emotional Closure**: Footer MUST be a warm, memorable send-off reinforcing the celebration's spirit.
+5. **Accessibility**: Ensure high contrast for yellow/gradient elements.
+
+Output ONLY the prompt text (600-800 words). Ensure technical accuracy and deeply personal storytelling.
+"""
 
         # Call Groq AI
         payload = {
