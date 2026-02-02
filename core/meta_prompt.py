@@ -3,38 +3,44 @@ import json
 class MetaPromptService:
     @staticmethod
     def construct_prompt(user_data):
-        occasion = user_data.get('occasion', 'generic').replace('_', ' ').title()
+        sub_type = user_data.get('sub_type', 'wishes')
         title = user_data.get('title', '')
         theme = user_data.get('theme', 'modern')
 
         visual_richness = user_data.get('visual_richness', 'medium')
-        ui_tier = user_data.get('ui_tier', 'festive' if 'birthday' in occasion.lower() else 'premium')
+        ui_tier = 'festive'
 
-        # Check if any image URLs are provided
-        has_images = any('http' in str(v) for k, v in user_data.items() if 'image' in k or 'photo' in k)
-        
+        # Determine the goal and narrative focus based on sub-type
+        if sub_type == 'wishes':
+            page_intent = "Birthday Wishes"
+            intent_goal = "Create an emotional, heart-centered birthday wish page with expressive visuals and zero effort for the user."
+            section_order = "Hero -> Emotional Message (Story) -> Visual Section (Personal framing) -> Warm Closure (Goodbye)"
+        else:
+            page_intent = "Birthday Invitation"
+            intent_goal = "Create a clear, informative birthday invitation page focusing on Date, Time, and Venue details for guests."
+            section_order = "Hero -> Event Details (Timing/Location) -> Special Message -> Visual Section -> RSVP -> Footer"
+
         prompt_parts = [
             f"You are a professional web designer and frontend developer.",
-            f"Create a visually stunning, single-page {occasion} website.",
+            f"Create a visually stunning, single-page {page_intent} website.",
             "",
+            f"Goal: {intent_goal}",
             f"Page Title: {title}",
             f"Design Theme: {theme.title()}",
             f"Visual Richness Level: {visual_richness.title()}",
             f"UI Quality Mode: {ui_tier.title()}",
             "",
-            "### Design Contract (v1.7 Visual Harmony)",
-            "- **Unlocked Expression**: You are ENCOURAGED to use expressive layouts, gradients (`bg-gradient-to-*`), and celebratory color combinations. Use ONLY official Tailwind colors (`pink`, `rose`, `purple`, `violet`, `yellow`, `amber`, `sky`, `blue`).",
-            "- **Drama Permission**: The Hero and RSVP sections may ignore standard spacing and layout rules to create maximum visual impact and drama.",
-            "- **Font Application (CRITICAL)**: If a custom font is used, import it via Google Fonts. Apply fonts using inline `style=\"font-family: '...';\"` or valid Tailwind-compatible usage. PROHIBITED: inventing font utility classes.",
-            "- **Image vs. Mood**: STRICT: NO `<img>` tags unless URLs are provided. The Visual/Centerpiece section must create MOOD using icons (recommended sizing), layered shapes, and color blocks—not just list icons.",
-            "- **Content Safety**: NEVER output gibberish or 'Lorem Ipsum'. Rewrite unclear text into a warm, meaningful message.",
-            "- **Age Consistency**: Use an adult/elegant tone for milestones (e.g., 21st). Avoid childlike language unless for a small child.",
+            "### Design Contract (v2.1 Visual Narrative)",
+            "- **Unlocked Expression**: You are ENCOURAGED to use expressive layouts, gradients, and celebratory color combinations.",
+            "- **Drama Permission**: Hero and primary call-to-action sections may use bold typography and high-impact visual anchors.",
+            "- **Zero Hallucination**: Use ONLY valid Tailwind CSS utilities. Use inline style for custom fonts if needed.",
+            "- **Adult Milestone Awareness**: Use an adult/elegant tone for milestones (e.g., 21st, 50th). Avoid childlike themes unless explicitly for a child.",
             "- **Technical**: Output ONLY valid HTML5 and Tailwind CSS. No JavaScript.",
             "",
             "### Content Details"
         ]
 
-        exclude_keys = ['occasion', 'email', 'theme', 'title', 'specific_fields', 'visual_richness', 'ui_tier']
+        exclude_keys = ['occasion', 'sub_type', 'email', 'theme', 'title', 'specific_fields']
 
         for key, value in user_data.items():
             if key not in exclude_keys and value:
@@ -42,9 +48,18 @@ class MetaPromptService:
                 prompt_parts.append(f"- {readable_key}: {value}")
 
         specific_fields = user_data.get('specific_fields', {})
+        gender = specific_fields.get('gender', 'Neutral')
+        color_suggestion = ""
+        if gender == 'Female':
+            color_suggestion = "Use a soft, feminine palette (e.g., Pink, Lavender, Rose Gold, or Pastels)."
+        elif gender == 'Male':
+            color_suggestion = "Use a masculine, sophisticated palette (e.g., Royal Blue, Slate, Charcoal, or Deep Emerald)."
+        else:
+            color_suggestion = "Use a vibrant, gender-neutral palette (e.g., Purple, Teal, Yellow, or Modern Gradients)."
+
         if specific_fields:
             prompt_parts.append("")
-            prompt_parts.append("### Occasion-Specific Details")
+            prompt_parts.append(f"### {page_intent} Specifics")
             for key, value in specific_fields.items():
                 if value and value != 'undefined':
                     readable_key = key.replace('_', ' ').title()
@@ -52,25 +67,18 @@ class MetaPromptService:
 
         prompt_parts.extend([
             "",
-            "### v1.9 Emotional Narrative & Visual Rhythm",
-            "- **Zero Hallucinated Utilities**: PROHIBITED: inventing font utility classes (e.g., NO `font-GreatVibes`). Use ONLY inline `style=\"font-family: '...';\"` for script fonts imported via Google Fonts. All body text must use clean Sans-serif.",
-            "- **Hero & Message Identity**: The Hero section must include an elegant, adult subtitle below the headline. The Special Message section must have its own identity (e.g., 'A Note from the Family') or a subtle unique icon, and use a soft, neutral background section to provide a visual break.",
-            "- **Event Scannability**: Use a 'Label: Value' pattern for details. Visually differentiate by making Labels (e.g., Date:, Location:) slightly bolder or darker than the regular weight Values.",
-            "- **Visual Storytelling**: Rewrite the Visual section framing to be deeply personal—reference names (e.g., Sarah), the surprise, or specific celebration energy. Group icons tightly or center-align vertically for impact.",
-            "- **RSVP Urgency & CTA**: Strengthen the RSVP business goal with a short urgency cue below the primary CTA (e.g., 'Please confirm by...'). Ensure the button is the unavoidable visual anchor.",
-            "- **Color Rhythm & Softening**: Rebalance gradients by introducing soft neutral sections (off-white, light gray, or warm neutral) between high-energy blocks. This prevents color fatigue while maintaining vibrancy.",
-            "- **Memorable Goodbye**: Rewrite the footer to sound like a warm, personal send-off that reinforces the celebration's emotion, not just a polite closing.",
-            "- **Accessibility & Contrast**: Ensure sufficient color contrast for yellow buttons and gradient text. Maintain professional-grade readability at all times.",
-            "",
-            "### Narrative Flow & Emotional Continuity",
-            "- **Storytelling**: Every section must feel like the next chapter with smooth transitions.",
-            "- **Emotional Goodbye**: The Footer must be a warm closing wave—thank the visitor and express anticipation.",
+            "### v2.1 Emotional Narrative & Visual Rhythm",
+            f"- **Intent-Focused Storytelling**: This is a {page_intent}. Ensure the layout reflects this purpose.",
+            f"- **Color Palette Suggestion**: {color_suggestion}",
+            "- **Visual Section Framing**: Use deeply personal framing—reference names, the relationship, or specific celebration energy.",
+            "- **Rhythm & Contrast**: Use neutral sections (off-whites/gray-50) between high-energy sections to prevent visual fatigue.",
+            "- **Event Scannability**: (If Invitation) Use clear 'Label: Value' blocks with bold labels for Date, Time, and Venue.",
+            "- **Memorable Send-off**: The footer must be a warm, personal wave that reinforces the celebration's spirit.",
             "",
             "### Layout & Structural Alignment",
-            "- **Order**: Hero -> Event Details -> Special Message -> Visual Section -> RSVP -> Footer.",
-            "- Each block must appear EXACTLY once. Prohibit all repetitions.",
-            "- Icons must be functional and placed beside/before the info they represent.",
-            "- Ensure 100% responsiveness on all device sizes."
+            f"- **Order**: {section_order}.",
+            "- Each block must appear EXACTLY once. Avoid all repetitions.",
+            "- Ensure 100% mobile responsiveness and professional-grade accessibility."
         ])
 
         return "\n".join(prompt_parts)

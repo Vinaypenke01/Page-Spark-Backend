@@ -98,7 +98,7 @@ class GeneratePromptRequestSerializer(serializers.Serializer):
     
     def validate_user_data(self, value):
         # Ensure required fields are present
-        required_fields = ['occasion', 'email']
+        required_fields = ['occasion', 'sub_type', 'email']
         for field in required_fields:
             if field not in value:
                 raise serializers.ValidationError(f"Missing required field: {field}")

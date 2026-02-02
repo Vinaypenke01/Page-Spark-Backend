@@ -35,22 +35,8 @@ class PageManager(models.Manager):
 class Page(models.Model):
     PAGE_TYPE_CHOICES = [
         ('birthday', 'Birthday Invitation'),
-        ('event', 'Event Page'),
-        ('landing', 'Landing Page'),
-        ('portfolio', 'Portfolio'),
-        ('announcement', 'Announcement'),
-        ('other', 'Other'),
     ]
     
-    THEME_CHOICES = [
-        ('light', 'Light'),
-        ('dark', 'Dark'),
-        ('colorful', 'Colorful & Fun'),
-        ('modern', 'Modern'),
-        ('elegant', 'Elegant'),
-        ('minimal', 'Minimal'),
-    ]
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(db_index=True)
     prompt = models.TextField(
@@ -60,11 +46,10 @@ class Page(models.Model):
     page_type = models.CharField(
         max_length=50, 
         choices=PAGE_TYPE_CHOICES,
-        default='other'
+        default='birthday'
     )
     theme = models.CharField(
         max_length=50, 
-        choices=THEME_CHOICES,
         default='modern'
     )
     html_content = models.TextField()

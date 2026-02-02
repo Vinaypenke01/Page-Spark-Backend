@@ -20,7 +20,7 @@ class GenericPageService:
         """
         Full page generation flow:
         1. Validates input
-        2. Generate HTML via OpenRouter
+        2. Generate HTML (with automatic retry for broken CDNs)
         3. Sanitize HTML
         4. Save page to DB
         """
@@ -41,28 +41,41 @@ class GenericPageService:
             logger.warning(f"Prompt rejected: too long ({len(prompt)} chars)")
             raise ValueError("Prompt exceeds maximum length of 7000 characters")
 
-        # Note: Removed suspicious pattern validation since prompts are now AI-generated
-        # and should be trusted. The AI is instructed to generate safe, HTML-only content.
+        # 2. Generate HTML with Retry Logic
+        max_retries = 3
+        last_error = None
+        clean_html = ""
 
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"Generation attempt {attempt + 1}/{max_retries}")
+                
+                # Generate
+                raw_html = OpenRouterService.generate_html(
+                    prompt=prompt,
+                    page_type=page_type,
+                    theme=theme
+                )
 
-        # 2. Generate HTML
-        try:
-            raw_html = OpenRouterService.generate_html(
-                prompt=prompt,
-                page_type=page_type,
-                theme=theme
-            )
-        except Exception as e:
-            logger.error(f"Failed to generate raw HTML: {str(e)}", exc_info=True)
-            raise
+                # Sanitize
+                clean_html = HtmlSanitizationService.sanitize(raw_html)
 
-        # 3. Sanitize HTML - RE-ENABLED with CDN support
-        try:
-            clean_html = HtmlSanitizationService.sanitize(raw_html)
-        except Exception as e:
-            logger.error(f"Failed to sanitize HTML: {str(e)}", exc_info=True)
-            # Fallback to a safe base if sanitization fails
-            clean_html = f"<!-- Sanitization Failed -->\n{raw_html}"
+                # Verify CDNs
+                broken_links = CdnVerificationService.verify_links(clean_html)
+                
+                if not broken_links:
+                    logger.info(f"CDN Verification successful on attempt {attempt + 1}")
+                    break
+                
+                logger.warning(f"Attempt {attempt + 1} failed CDN verification. Broken links: {broken_links}")
+                if attempt == max_retries - 1:
+                    logger.error("Reached maximum retries for CDN verification. Proceeding with last attempt.")
+            
+            except Exception as e:
+                logger.error(f"Error on generation attempt {attempt + 1}: {str(e)}")
+                last_error = e
+                if attempt == max_retries - 1:
+                    raise
 
         # 4. Save Page
         page = Page.objects.create(
@@ -72,7 +85,7 @@ class GenericPageService:
             theme=theme,
             html_content=clean_html,
             meta_data={
-                "version": "1.8",
+                "version": "2.2",
                 "provider": "groq",
                 "model": settings.GROQ_HTML_MODEL,
                 "generated_at": timezone.now().isoformat(),
@@ -85,6 +98,40 @@ class GenericPageService:
 
 
 # ==========================================================
+# CDN VERIFICATION SERVICE
+# ==========================================================
+class CdnVerificationService:
+    @staticmethod
+    def verify_links(html_content):
+        """Checks if all external CDN links are reachable"""
+        logger.debug("Starting CDN verification")
+        soup = BeautifulSoup(html_content, 'html.parser')
+        links = []
+        
+        # Extract scripts and links
+        for script in soup.find_all('script', src=True):
+            links.append(script['src'])
+        for link in soup.find_all('link', href=True):
+            links.append(link['href'])
+            
+        # Filter for external absolute URLs
+        external_links = [l for l in links if l.startswith('http')]
+        
+        broken_links = []
+        for url in external_links:
+            try:
+                # Use a fast HEAD request with short timeout
+                response = requests.head(url, timeout=5, allow_redirects=True)
+                if response.status_code >= 400:
+                    broken_links.append(url)
+            except Exception as e:
+                logger.warning(f"Link check failed for {url}: {str(e)}")
+                broken_links.append(url)
+                
+        return broken_links
+
+
+# ==========================================================
 # OPENROUTER SERVICE
 # ==========================================================
 class OpenRouterService:
@@ -93,20 +140,25 @@ class OpenRouterService:
         logger.debug("Preparing OpenRouter request")
 
         system_prompt = f"""
-You are an EXPERT FRONTEND ENGINEER specializing in award-winning UI/UX built with clean, semantic HTML/Tailwind CSS.
-Your goal is to build a breathtaking, high-performance storytelling masterpiece.
-
-**VISUAL NARRATIVE CONTRACT (v1.9)**:
-1. **ZERO HALLUCINATED UTILITIES**: PROHIBITED: inventing font utility classes (e.g., no `font-GreatVibes`). Use ONLY inline `style` for script fonts. All body text MUST be clean Sans-serif.
-2. **NARRATIVE ARCHITECTURE**: Hero MUST include a dominant headline + an elegant, adult subtitle. The Special Message MUST have its own heading or subtle icon and a soft, neutral background as a rhythm break.
-3. **PERSONAL FRAMING**: Visual section MUST use deeply personal narrative framing (referencing names like Sarah, the surprise, the celebration) to give icon clusters purpose.
-4. **SCANNABILITY**: Make Labels (Date:, Location:) bold/dark vs Regular Values. Use a structured 'Label: Value' pattern.
-5. **RHYTHM & CONTRAST**: Introduce neutral breaks (off-white/light gray) between high-energy sections. Ensure high contrast for yellow/gradient elements.
-6. **RSVP URGENCY**: Add a short urgency cue below the primary CTA. 
-7. **MEMORABLE GOODBYE**: Footer MUST be a warm, personal send-off reinforcing the celebration's spirit.
+You are an EXPERT FRONTEND ENGINEER specializing in award-winning UI/UX for Birthday Invitations and Wishes built with clean, semantic HTML/Tailwind CSS.
+Your goal is to build a breathtaking, high-performance Birthday storytelling masterpiece.
+ 
+**VISUAL NARRATIVE CONTRACT (v2.2)**:
+1. **INTENT AWARENESS**: This page is either a "Birthday Invitation" (focus on event details/RSVP) or "Birthday Wishes" (focus on emotional message/story). Identify the intent from the prompt and adjust the layout hierarchy.
+2. **GENDER-AWARE STYLING**: Identify the gender of the birthday person from the prompt. Apply a curated color palette and visual mood accordingly:
+   - Female: Soft, elegant, or vibrant feminine tones (Pink, Lavender, Rose Gold, Pastels).
+   - Male: Robust, sophisticated, or modern masculine tones (Blue, Slate, Charcoal, Emerald).
+   - Neutral: Modern, vibrant gender-neutral gradients (Teal, Purple, Amber, Monochrome).
+3. **ZERO HALLUCINATED UTILITIES**: Use ONLY valid Tailwind CSS. Use inline `style` for script fonts.
+4. **NARRATIVE ARCHITECTURE**: 
+   - Invitation: Hero -> Event Details -> Special Message -> Visual Section -> RSVP -> Footer.
+   - Wishes: Hero -> Emotional Message -> Visual Section -> Warm Closure.
+5. **PERSONAL FRAMING**: Visual section MUST use deeply personal narrative framing (referencing the person, relationship, or celebration) to give icon clusters purpose.
+6. **SCANNABILITY**: (For Invitations) Make Labels (Date:, Location:) bold/dark vs Regular Values.
+7. **RHYTHM & CONTRAST**: Introduce neutral breaks (off-white/light gray) between high-energy sections. Ensure high contrast for all elements.
+8. **MEMORABLE GOODBYE**: Footer MUST be a warm, personal send-off reinforcing the birthday celebration's spirit.
 
 **STRUCTURAL DISCIPLINE**:
-- Order: Hero -> Event Details -> Special Message -> Visual Section (Story Framing) -> RSVP -> Footer.
 - Each block must appear EXACTLY once.
 - Quality: Adult tone for adult milestones. NO "Lorem Ipsum".
 
@@ -120,11 +172,11 @@ Your goal is to build a breathtaking, high-performance storytelling masterpiece.
 3. Remove `<think>` tags.
 
 **CONTEXT**:
-- **Page Type**: {page_type}
+- **Page Type**: Birthday Celebration (v2.2)
 - **Theme**: {theme}
 - **User Prompt**: {prompt}
 
-Build the production-ready masterpiece v1.8 now.
+Build the production-ready Birthday masterpiece v2.2 now.
 """
 
         payload = {

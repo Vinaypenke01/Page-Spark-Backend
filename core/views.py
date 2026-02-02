@@ -228,42 +228,59 @@ class GeneratePromptView(APIView):
             )
     
     def _generate_prompt_with_ai(self, user_data):
-        """Use OpenRouter AI to generate an optimized prompt from user data"""
+        """Use Groq AI to generate an optimized prompt from user data"""
         
         # Extract key information
-        occasion = user_data.get('occasion', 'generic').replace('_', ' ').title()
+        sub_type = user_data.get('sub_type', 'wishes')
         title = user_data.get('title', '')
         theme = user_data.get('theme', 'modern')
         font = user_data.get('font', 'sans')
         
+        # Determine intent for the meta-prompt
+        specific_fields = user_data.get('specific_fields', {})
+        gender = specific_fields.get('gender', 'Neutral')
+        color_intent = f"appropriate for {gender} (e.g., {'Pink/Pastel' if gender == 'Female' else 'Blue/Corporate' if gender == 'Male' else 'Vibrant/Neutral'})"
+
+        if sub_type == 'wishes':
+            page_intent = "Birthday Wishes"
+            intent_context = f"emotional, heart-centered birthday wish page with expressive visuals and colors {color_intent}"
+            layer2_flexible = """1. **Rhythm Softening**: Introduce neutral contrast sections between high-energy blocks.
+2. **Story Section**: Focus the message section on the relationship and shared memories.
+3. **Emotional Closure**: Footer MUST be a warm, memorable send-off reinforcing the birthday spirit."""
+        else: # Default to invitation if not wishes
+            page_intent = "Birthday Invitation"
+            intent_context = f"clear, informative birthday invitation page focusing on Date, Time, and Venue, with colors {color_intent}"
+            layer2_flexible = """1. **Rhythm Softening**: Introduce neutral contrast sections between high-energy blocks.
+2. **RSVP Urgency**: Primary CTA MUST have an urgency cue below (e.g., 'RSVP by...'). 
+3. **Event Focus**: Ensure Date, Time, and Location are the most scannable elements.
+4. **Emotional Closure**: Footer MUST be a warm, memorable send-off reinforcing the birthday spirit."""
+
         # Create a meta-prompt for the AI to generate the actual prompt
-        meta_prompt = f"""You are a professional prompt engineer specializing in web design. Generate a highly detailed, optimized prompt for creating a stunning {occasion} invitation web page.
+        meta_prompt = f"""You are a professional prompt engineer. Generate a highly detailed, optimized prompt for creating a stunning {page_intent} web page.
 
 User Requirements:
+- Page Intent: {page_intent} ({intent_context})
+- Birthday Person Gender: {gender}
 - Page Title: {title}
 - Theme: {theme}
 - Font Style: {font}
-- Occasion: {occasion}
 
 User Data:
 {self._format_user_data(user_data)}
 
-Generate a professional, structured prompt for an expert frontend engineer to build a high-quality {occasion} invitation page. 
+Generate a professional, structured prompt for an expert frontend engineer to build a high-quality {page_intent} page. 
 
 The prompt MUST be divided into two layers:
 
 **Layer 1: Engineering & Emotional Contract (LOCKED)**
-1. **Clean Code & Font Policy**: Use ONLY valid Tailwind colors. PROHIBITED: inventing font utility classes (e.g., no `font-GreatVibes`). Use inline styles for custom script fonts. 
+1. **Clean Code & Font Policy**: Use ONLY valid Tailwind colors. PROHIBITED: inventing font utility classes. Use inline styles for custom script fonts. 
 2. **Scannability**: Make Labels (Date:, Location:) bold/dark vs Regular Values. Structure as 'Label: Value'.
-3. **Hero & Message Identity**: Hero MUST include an elegant headline + adult subtitle. Special Message must have its own header (e.g., 'A Note of Joy') and a neutral/soft background.
-4. **Content Safety & Tone**: NEVER output gibberish. Use deeply personal narrative framing (referencing names like Sarah, the surprise, the celebration energy).
+3. **Hero & Message Identity**: Hero MUST include an elegant headline + adult subtitle. Special Message must have its own header and a neutral/soft background.
+4. **Content Safety & Tone**: NEVER output gibberish. Use deeply personal narrative framing.
 
 **Layer 2: Visual Rhythm & Impact (FLEXIBLE)**
-1. **Rhythm Softening**: Introduce neutral contrast sections (off-white/light gray) between high-energy blocks to prevent color fatigue.
-2. **RSVP Urgency**: Primary CTA MUST have an urgency cue below (e.g., 'RSVP by...'). 
-3. **Narrative Visuals**: Visual section must use personal framing text and icon clusters to create an emotional vibe.
-4. **Emotional Closure**: Footer MUST be a warm, memorable send-off reinforcing the celebration's spirit.
-5. **Accessibility**: Ensure high contrast for yellow/gradient elements.
+{layer2_flexible}
+5. **Accessibility**: Ensure high contrast for all elements.
 
 Output ONLY the prompt text (600-800 words). Ensure technical accuracy and deeply personal storytelling.
 """
