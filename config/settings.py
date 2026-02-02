@@ -150,7 +150,7 @@ else:
 # ==============================================================================
 GROQ_API_KEY = env('GROQ_API_KEY')
 GROQ_PROMPT_MODEL = env('GROQ_PROMPT_MODEL', default='llama-3.3-70b-versatile')  # For prompt generation
-GROQ_HTML_MODEL = env('GROQ_HTML_MODEL', default='llama-3.1-8b-instant')  # For HTML generation
+GROQ_HTML_MODEL = env('GROQ_HTML_MODEL', default='deepseek-r1-distill-llama-70b')  # For HTML generation
 
 # ==============================================================================
 # Django REST Framework Configuration

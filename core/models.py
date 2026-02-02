@@ -48,6 +48,7 @@ class Page(models.Model):
         ('colorful', 'Colorful & Fun'),
         ('modern', 'Modern'),
         ('elegant', 'Elegant'),
+        ('minimal', 'Minimal'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

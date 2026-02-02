@@ -248,56 +248,16 @@ User Requirements:
 User Data:
 {self._format_user_data(user_data)}
 
-Generate a comprehensive, effective prompt that will result in a BEAUTIFUL, MODERN, and PROFESSIONAL web page. The prompt MUST include:
+Generate a professional, structured prompt for an expert frontend engineer to build a high-quality {occasion} invitation page. 
 
-1. **Page Purpose & Context**
-   - Clearly describe this is a {occasion} invitation page
-   - Explain the target audience and desired emotional impact
-   - Specify the overall tone (elegant, fun, professional, etc.)
+The prompt MUST include:
+1. **Mandatory Section Order**: Enforce a strict sequence: Hero Header, Event Details, Special Message, Visual Section, RSVP, and Footer.
+2. **Technical Discipline**: Demand 100% valid HTML5 with proper tag closure and no repetition of sections or headings.
+3. **Meaningful Content**: Instruct the engineer to write emotionally resonant and context-aware text, explicitly banning "Lorem Ipsum" and nonsense characters.
+4. **Visual Style**: Recommend a '{theme}' aesthetic with suitable Google Fonts and CDN-based icons (FontAwesome/RemixIcon).
+5. **MANDATORY Responsiveness**: Ensure the page is perfectly responsive across all device sizes.
 
-2. **Visual Design Requirements** (CRITICAL - Be very specific)
-   - Use a {theme} theme with a sophisticated color palette
-   - Implement modern design trends: gradients, subtle shadows, smooth animations
-   - Use {font} fonts with proper typography hierarchy
-   - Include visual elements: decorative borders, icons, background patterns
-   - Ensure generous white space and balanced layouts
-   - Add hover effects and micro-interactions for engagement
-
-3. **Tailwind CSS Implementation** (MANDATORY)
-   - MUST include Tailwind CSS CDN link in the HTML
-   - Use ONLY Tailwind utility classes for ALL styling
-   - Specify exact Tailwind classes for: colors, spacing, typography, shadows, gradients
-   - Examples: "bg-gradient-to-r from-purple-600 to-pink-600", "shadow-2xl", "hover:scale-105 transition-transform"
-   - NO custom CSS or <style> tags allowed
-   - Use Tailwind's responsive classes (sm:, md:, lg:, xl:)
-
-4. **Layout & Structure**
-   - Responsive design that works on mobile, tablet, and desktop
-   - Clear visual hierarchy with hero section, details section, and call-to-action
-   - Use Tailwind's flexbox/grid utilities for layouts
-   - Include all user-provided details in an organized, visually appealing way
-
-5. **Content Sections to Include**
-   - Eye-catching header with title and decorative elements
-   - Main content area with all event details
-   - Visual separators between sections
-   - Footer with additional information or RSVP details
-
-6. **Technical Requirements**
-   - Pure HTML with Tailwind CSS CDN
-   - No JavaScript, no external images (use Tailwind's built-in features)
-   - Semantic HTML5 elements
-   - Accessible and SEO-friendly markup
-
-7. **Quality Standards**
-   - The page should look PREMIUM and PROFESSIONAL
-   - Use vibrant, harmonious colors from Tailwind's palette
-   - Implement smooth transitions and subtle animations
-   - Ensure the design would impress users at first glance
-
-Output a detailed, structured prompt (500-800 words) that an AI can follow to generate a stunning web page. Be VERY specific about Tailwind classes, colors, and design elements. The resulting page should be worthy of a professional designer's portfolio.
-
-Output ONLY the prompt text, no explanations or meta-commentary."""
+Output ONLY the prompt text (500-800 words), focused on production stability and technical quality. No explanations or meta-commentary."""
 
         # Call Groq AI
         payload = {

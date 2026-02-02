@@ -1,6 +1,7 @@
 import logging
 import requests
 import bleach
+import re
 from bs4 import BeautifulSoup
 from django.conf import settings
 from .models import Page
@@ -95,88 +96,53 @@ class OpenRouterService:
         logger.debug("Preparing OpenRouter request")
 
         system_prompt = f"""
-You are a PREMIUM web designer creating STUNNING mobile-first invitation pages.
+You are an EXPERT FRONTEND ENGINEER specializing in clean, semantic, and production-ready HTML/Tailwind CSS.
+Your goal is to build a high-quality, fully responsive, and bug-free single-page website for the user's request.
 
-**CRITICAL OUTPUT RULE**: Return ONLY the HTML code. NO markdown, NO code blocks, NO explanations, NO comments outside HTML.
+**STRUCTURAL DISCIPLINE**:
+1. **Mandatory Section Order**: You MUST include these sections in this exact order:
+   - Hero / Header (Impactful entry)
+   - Event Details (Clear logistics: Date, Time, Venue)
+   - Special Message (Key context/narrative)
+   - Image / Visual Section (Placeholders for atmosphere)
+   - RSVP / CTA (Actionable element)
+   - Footer (Closing info)
+2. **NO Repetition**: Every section must appear ONLY ONCE. Do not duplicate headings, content blocks, or UI elements.
+3. **MANDATORY Responsiveness**: The page MUST be perfectly responsive and look stunning on all devices (mobile, tablet, and desktop).
 
-🎯 **DESIGN REQUIREMENTS**:
+**CONTENT QUALITY**:
+- **Meaningful Text**: PROHIBITED: "asdf", random characters, "Lorem Ipsum", or nonsense placeholders. 
+- You MUST write meaningful, emotionally resonant, and context-aware text that serves the user's occasion.
+- All tags must be properly nested, opened, and closed. Ensure 100% valid HTML5 DOM structure.
 
-**1. HEADER - Full Height Hero** (MUST INCLUDE):
-- Class: bg-gradient-to-br from-purple-600 via-pink-600 to-rose-500 min-h-screen flex items-center justify-center relative overflow-hidden
-- Add 2-3 decorative SVG stars/shapes with animate-pulse, position absolute
-- Title: text-5xl md:text-7xl font-extrabold text-white text-center
-- Subtitle with decorative lines
+**TECHNICAL REQUIREMENTS**:
+- **Output**: ONLY valid, standalone HTML5 code.
+- **Styling**: Use ONLY Tailwind CSS via CDN.
+- **Fonts**: Use Google Fonts via CDN.
+- **Icons**: Use FontAwesome or RemixIcon via CDN.
+- **Interactivity**: Use subtle, professional CSS animations and transitions (avoid over-engineering).
 
-**2. MAIN CARD - Premium White Card**:
-- Wrap in: max-w-4xl mx-auto -mt-20 relative z-10 px-4
-- Card: bg-white rounded-3xl shadow-2xl overflow-hidden
+**CRITICAL RULES**:
+1. Start directly with `<!DOCTYPE html>`.
+2. NO Markdown code blocks.
+3. NO conversational text or explanations.
+4. Remove `<think>` tags.
 
-**3. EVENT DETAILS - Icon Grid** (4 cards in 2x2 grid):
-```
-<div class="grid grid-cols-1 md:grid-cols-2 gap-px bg-gray-200">
-  <div class="bg-white p-8 text-center">
-    <div class="bg-purple-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center animate-pulse">
-      <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-      </svg>
-    </div>
-    <p class="text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">When</p>
-    <p class="text-xl font-bold text-gray-900">Date Here</p>
-  </div>
-</div>
-```
-Use these 4 icons with different background colors:
-- Date: purple-100/purple-600 (calendar icon)
-- Location: pink-100/pink-600 (map pin icon)
-- Dress: yellow-100/yellow-600 (shirt icon)
-- Type: blue-100/blue-600 (star icon)
+**CONTEXT**:
+- **Page Type**: {page_type}
+- **Theme**: {theme}
+- **User Prompt**: {prompt}
 
-**4. RSVP BUTTON**:
-- bg-gradient-to-r from-purple-600 to-pink-600 text-white px-12 py-4 rounded-full text-xl font-bold shadow-2xl hover:scale-110 transform transition duration-300
-
-**5. FOOTER**:
-- bg-gradient-to-r from-purple-50 to-pink-50 py-12
-- Include 3 animated bouncing dots (different animation delays)
-
-**SVG ICONS TO USE** (copy exactly):
-
-Calendar: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>`
-
-Map Pin: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>`
-
-Star: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>`
-
-**MOBILE-FIRST CLASSES**:
-- Default (mobile): text-4xl, p-6, grid-cols-1, space-y-6
-- md: (tablet): text-6xl, p-12, grid-cols-2
-- lg: (desktop): max-w-6xl, px-16
-
-**PAGE TYPE**: {page_type}
-**THEME**: {theme}
-**USER DATA**: {prompt}
-
-**OUTPUT FORMAT** (CRITICAL):
-1. Start with <!DOCTYPE html>
-2. NO markdown code blocks (```)
-3. NO explanatory text
-4. Include ALL SVG icons (minimum 4)
-5. Use exact color scheme: purple-600, pink-600, rose-500
-6. Full-height gradient header
-7. White rounded-3xl main card
-8. 2x2 icon grid
-9. Gradient button
-10. Animated elements (pulse, bounce)
-
-Generate the complete HTML now:
+Generate the production-ready HTML now following all structural rules.
 """
 
         payload = {
             "model": settings.GROQ_HTML_MODEL,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": "Create the most beautiful, modern page possible following all the design guidelines."}
+                {"role": "user", "content": "Generate the complete, structurally sound HTML code now."}
             ],
-            "temperature": 0.7,
+            "temperature": 0.4,
             "max_tokens": 4000
         }
 
@@ -203,6 +169,10 @@ Generate the complete HTML now:
             
             # Clean up potential markdown wrapper if LLM didn't follow instructions
             content = content.strip()
+            
+            # Remove DeepSeek <think> tags if present
+            content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+
             if content.startswith("```html"):
                 content = content[7:].strip()
             if content.endswith("```"):
